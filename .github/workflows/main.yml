@@ -1,0 +1,39 @@
+name: Build Signed APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.22.1'  # غيّره إذا كنت تستخدم إصدار Flutter مختلف في FlutterFlow
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Decode Keystore
+      run: echo "${{ secrets.CM_KEYSTORE }}" | base64 --decode > android/app/upload-keystore.jks
+
+    - name: Create key.properties
+      run: |
+        echo "storeFile=upload-keystore.jks" > android/key.properties
+        echo "storePassword=${{ secrets.CM_KEYSTORE_PASSWORD }}" >> android/key.properties
+        echo "keyAlias=${{ secrets.CM_KEY_ALIAS }}" >> android/key.properties
+        echo "keyPassword=${{ secrets.CM_KEY_PASSWORD }}" >> android/key.properties
+
+    - name: Build Signed APK
+      run: flutter build apk --release
+
+    - name: Upload Signed APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: Signed APK
+        path: build/app/outputs/flutter-apk/app-release.apk
